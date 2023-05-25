@@ -18,6 +18,7 @@ import { EmailSubscription } from 'aws-cdk-lib/aws-sns-subscriptions';
 //import { IStage } from 'aws-cdk-lib/aws-apigateway';
 
 import { CodePipeline, CodePipelineSource, ShellStep } from 'aws-cdk-lib/pipelines';
+import { LambdaAppStage } from './stages/lamba-app-stage';
 
 // import * as sqs from '@aws-cdk/aws-sqs';
 //import { Construct } from '@aws-cdk/core';
@@ -36,9 +37,18 @@ export class fullStackPipeline extends cdk.Stack {
         input: CodePipelineSource.gitHub('kengne66/cdk-pipeline-for-fullstatck', 'main', {
           authentication: githubAuth
         }),
+        installCommands: [
+          'npm install -g aws-cdk'
+      ],
         commands: ['npm ci', 'npm run build', 'npx cdk synth']
       })
     });
+
+    fullstackpipeline.addStage(new LambdaAppStage(this, "appStage", {
+      env: {account: '673233218795', region: 'us-east-1',}
+    }))
+
+
   }
 }
 
