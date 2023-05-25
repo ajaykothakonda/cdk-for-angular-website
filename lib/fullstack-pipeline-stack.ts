@@ -2,9 +2,9 @@ import * as cdk from 'aws-cdk-lib';
 import { SecretValue, Environment } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { BuildEnvironmentVariableType, BuildSpec, LinuxBuildImage, PipelineProject, Project } from 'aws-cdk-lib/aws-codebuild';
-import { Artifact, IStage, Pipeline } from 'aws-cdk-lib/aws-codepipeline';
-import { CodePipeline } from "aws-cdk-lib/pipelines";
-import { CloudFormationCreateUpdateStackAction, CodeBuildAction, CodeBuildActionType, GitHubSourceAction, S3DeployAction } from 'aws-cdk-lib/aws-codepipeline-actions';
+//import { Artifact, IStage, Pipeline } from 'aws-cdk-lib/aws-codepipeline';
+//import { CodePipeline } from "aws-cdk-lib/pipelines";
+import { CloudFormationCreateUpdateStackAction, CodeBuildAction, CodeBuildActionType, GitHubSourceAction } from 'aws-cdk-lib/aws-codepipeline-actions';
 //import { ServiceStack } from "./service-stack";
 //import * as yaml from 'yaml'; // https://www.npmjs.com/package/yaml
 import * as path from "path";
@@ -15,21 +15,43 @@ import { SnsTopic } from 'aws-cdk-lib/aws-events-targets';
 import { Topic } from 'aws-cdk-lib/aws-sns';
 import { EventField, RuleTargetInput } from 'aws-cdk-lib/aws-events';
 import { EmailSubscription } from 'aws-cdk-lib/aws-sns-subscriptions';
-import { WebsiteStage } from './stages/website';
-import * as s3 from "aws-cdk-lib/aws-s3"
-import { FrontendStack } from './frontend';
 //import { IStage } from 'aws-cdk-lib/aws-apigateway';
+
+import { CodePipeline, CodePipelineSource, ShellStep } from 'aws-cdk-lib/pipelines';
 
 // import * as sqs from '@aws-cdk/aws-sqs';
 //import { Construct } from '@aws-cdk/core';
 
+
+
+export class fullStackPipeline extends cdk.Stack {
+  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
+    super(scope, id, props);
+
+    const githubAuth = cdk.SecretValue.secretsManager('github-token');
+
+    const fullstackpipeline = new CodePipeline(this, 'fullstackPipeline', {
+      pipelineName: 'fullstackPipeline',
+      synth: new ShellStep('Synth', {
+        input: CodePipelineSource.gitHub('kengne66/cdk-pipeline-for-fullstatck', 'main', {
+          authentication: githubAuth
+        }),
+        commands: ['npm ci', 'npm run build', 'npx cdk synth']
+      })
+    });
+  }
+}
+
+
+
+
+/*
 export class PipelineCdkStack extends cdk.Stack {
   private readonly pipeline: Pipeline;
   private readonly cdkBuildOutput: Artifact;
   private readonly angularBuildOutput: Artifact;
   private readonly angularSourceOutput: Artifact;
   private readonly pipelineNotificationsTopic: Topic;
-  readonly domainName = "envision.com"
 
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
@@ -114,43 +136,6 @@ export class PipelineCdkStack extends cdk.Stack {
         })
       ]
     });
-/*
-    const infraStage =  new WebsiteStage(this, "infraStage", {
-      domainName: this.domainName
-    })
-*/
-
-  const frontEndStack = new FrontendStack(this, "FrontEndStack", {
-    domainName: this.domainName
-  });
-  const frontEndStackName = frontEndStack.stackName;
-
-  this.pipeline.addStage({
-    stageName: "infrastage",
-    actions: [
-      new CloudFormationCreateUpdateStackAction( {
-        actionName: "websiteInfraupdate",
-        stackName: frontEndStack.stackName,
-        templatePath: this.cdkBuildOutput.atPath(frontEndStack.templateFile),
-        adminPermissions: true
-      }),
-
-    ]
-
-  });
-
-    //const targetBucket = s3.Bucket.fromBucketArn(this, "websiteBucket", cdk.Fn.importValue("websitebucket"))
-    const targetBucket = frontEndStack.frontEndBucket
-    this.pipeline.addStage({
-      stageName: "deploy",
-      actions: [
-        new S3DeployAction({
-          actionName: 's3Deploy',
-          bucket: targetBucket,
-          input: this.angularBuildOutput,
-        })
-      ]
-    });
 
     this.pipeline.addStage( {
       stageName: "pipeline_Update",
@@ -166,6 +151,12 @@ export class PipelineCdkStack extends cdk.Stack {
   
 
   }
+*/
+
+
+
+
+
   /*
   public addServiceStage(serviceStack: ServiceStack, stageName: string): IStage {
     return this.pipeline.addStage({
@@ -241,4 +232,3 @@ export class PipelineCdkStack extends cdk.Stack {
   }
   */
   
-}

@@ -1,5 +1,5 @@
 {
-  "name": "cdk-for-angular-website",
+  "name": "cdk-for-fullstack",
   "version": "0.1.0",
   "bin": {
     "cdk-for-angular-website": "bin/cdk-for-angular-website.js"
