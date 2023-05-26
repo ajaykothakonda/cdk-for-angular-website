@@ -1,7 +1,7 @@
 import * as cdk from 'aws-cdk-lib';
 import { SecretValue, Environment } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { BuildEnvironmentVariableType, BuildSpec, LinuxBuildImage, PipelineProject, Project } from 'aws-cdk-lib/aws-codebuild';
+import { Artifacts, BuildEnvironmentVariableType, BuildSpec, LinuxBuildImage, PipelineProject, Project } from 'aws-cdk-lib/aws-codebuild';
 //import { Artifact, IStage, Pipeline } from 'aws-cdk-lib/aws-codepipeline';
 //import { CodePipeline } from "aws-cdk-lib/pipelines";
 import { CloudFormationCreateUpdateStackAction, CodeBuildAction, CodeBuildActionType, GitHubSourceAction } from 'aws-cdk-lib/aws-codepipeline-actions';
@@ -17,8 +17,9 @@ import { EventField, RuleTargetInput } from 'aws-cdk-lib/aws-events';
 import { EmailSubscription } from 'aws-cdk-lib/aws-sns-subscriptions';
 //import { IStage } from 'aws-cdk-lib/aws-apigateway';
 
-import { CodePipeline, CodePipelineSource, ShellStep } from 'aws-cdk-lib/pipelines';
+import { CodeBuildStep, CodePipeline, CodePipelineSource, ShellStep } from 'aws-cdk-lib/pipelines';
 import { LambdaAppStage } from './stages/lamba-app-stage';
+import { BucketDeployment, Source } from "aws-cdk-lib/aws-s3-deployment"; 
 
 // import * as sqs from '@aws-cdk/aws-sqs';
 //import { Construct } from '@aws-cdk/core';
@@ -37,17 +38,52 @@ export class fullStackPipeline extends cdk.Stack {
         input: CodePipelineSource.gitHub('kengne66/cdk-pipeline-for-fullstatck', 'main', {
           authentication: githubAuth
         }),
+/*
+        additionalInputs: {
+          "../static-website": CodePipelineSource.gitHub('kengne66/angular-website-example', 'master', {
+            authentication: githubAuth
+          }),
+      
+        },
+*/
         installCommands: [
           'npm install -g aws-cdk'
       ],
         commands: ['npm ci', 'npm run build', 'npx cdk synth']
-      })
+      }),
+
+      
     });
 
-    fullstackpipeline.addStage(new LambdaAppStage(this, "appStage", {
+    fullstackpipeline.addWave('MyWave', {
+      post: [
+        new CodeBuildStep('RunApproval', {
+          input: CodePipelineSource.gitHub('kengne66/angular-website-example', 'master', {
+            authentication: githubAuth
+          }),
+          
+
+          installCommands: [
+            'npm install -g aws-cdk'
+        ],
+          commands: ['npm ci', 'npm run build', 'npx cdk synth', 'ls'],
+          buildEnvironment: {
+            // The user of a Docker image asset in the pipeline requires turning on
+            // 'dockerEnabledForSelfMutation'.
+            buildImage: LinuxBuildImage.STANDARD_6_0
+          },
+          primaryOutputDirectory: 'dist/websitePractise',
+          
+        }),
+      ],
+    });
+
+
+/*
+    fullstackpipeline.addStage(new LambdaAppStage(this, "dev", {
       env: {account: '673233218795', region: 'us-east-1',}
     }))
-
+*/
 
   }
 }
